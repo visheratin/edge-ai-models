@@ -18,11 +18,7 @@ class Model(pl.LightningModule):
         return optimizer
 
     def training_step(self, batch: torch.Tensor, batch_idx: int):
-        source_ids, attn_masks, target_ids = (
-            batch[:, 0].contiguous(),
-            batch[:, 1].contiguous(),
-            batch[:, 2].contiguous(),
-        )
+        source_ids, attn_masks, target_ids = batch
         outputs = self.model.forward(
             input_ids=source_ids, attention_mask=attn_masks, labels=target_ids
         )
@@ -30,11 +26,7 @@ class Model(pl.LightningModule):
         return {"loss": outputs.loss}
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int):
-        source_ids, attn_masks, target_ids = (
-            batch[:, 0].contiguous(),
-            batch[:, 1].contiguous(),
-            batch[:, 2].contiguous(),
-        )
+        source_ids, attn_masks, target_ids = batch
         outputs = self.model.forward(
             input_ids=source_ids, attention_mask=attn_masks, labels=target_ids
         )

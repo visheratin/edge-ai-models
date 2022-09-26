@@ -3,8 +3,6 @@ import os
 from pathlib import Path
 
 import pytorch_lightning as pl
-import torch
-import torch.multiprocessing
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, ModelSummary
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies.ddp import DDPStrategy
@@ -18,7 +16,6 @@ if __name__ == "__main__":
         "-m",
         "--model",
         type=str,
-        metavar="M",
         help="name of the segmentation model to use",
         dest="model",
     )
@@ -26,7 +23,6 @@ if __name__ == "__main__":
         "-lr",
         "--learning_rate",
         type=float,
-        metavar="LR",
         help="default learning rate",
         dest="learning_rate",
     )
@@ -34,7 +30,6 @@ if __name__ == "__main__":
         "-bs",
         "--batch_size",
         type=int,
-        metavar="BS",
         help="batch size",
         dest="batch_size",
     )
@@ -42,7 +37,6 @@ if __name__ == "__main__":
         "-d",
         "--data_dir",
         type=str,
-        metavar="D",
         help="directory containing the data for training",
         dest="data_dir",
     )
@@ -50,7 +44,6 @@ if __name__ == "__main__":
         "-n",
         "--epochs_num",
         type=int,
-        metavar="EN",
         help="number of epochs to train",
         dest="epochs_num",
     )
@@ -66,7 +59,9 @@ if __name__ == "__main__":
     train_dir = os.path.join(args.data_dir, "train")
     val_dir = os.path.join(args.data_dir, "val")
     model = Model(args.model, args.learning_rate)
-    data_module = DataModule(train_dir, val_dir, args.batch_size)
+    data_module = DataModule(
+        train_dir, val_dir, "google/t5-efficient-tiny", args.batch_size
+    )
     log_dir = Path("training") / "logs"
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     summary_callback = ModelSummary(max_depth=2)
@@ -98,9 +93,8 @@ if __name__ == "__main__":
             checkpoint_callback,
             es_callback,
         ],
-        # precision=16,
         logger=wandb_logger,
-        # strategy=DDPStrategy(find_unused_parameters=False),
+        strategy=DDPStrategy(find_unused_parameters=False),
     )
     params = {
         "batch_size": data_module.batch_size,

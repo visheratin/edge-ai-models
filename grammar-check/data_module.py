@@ -1,10 +1,7 @@
-import os
-from io import BytesIO
-
 import pytorch_lightning as pl
-import torch
-import webdataset as wds
 from torch.utils.data import DataLoader
+
+from dataset import Dataset
 
 
 class DataModule(pl.LightningDataModule):
@@ -12,21 +9,28 @@ class DataModule(pl.LightningDataModule):
         self,
         train_dir: str,
         val_dir: str,
+        model_name: str,
         batch_size: int = 32,
     ):
         super().__init__()
         self.batch_size = batch_size
-        train_files = [
-            os.path.join(train_dir, file_name) for file_name in os.listdir(train_dir)
-        ]
-        self.train_dataset = wds.WebDataset(train_files).compose(load_tensors)
-        val_files = [
-            os.path.join(val_dir, file_name) for file_name in os.listdir(val_dir)
-        ]
-        self.val_dataset = wds.WebDataset(val_files).compose(load_tensors)
+        self.train_dir = train_dir
+        self.val_dir = val_dir
+        self.model_name = model_name
 
     def setup(self, stage=None):
-        pass
+        self.train_dataset = Dataset(
+            self.train_dir,
+            self.model_name,
+            self.trainer.global_rank,
+            self.trainer.world_size,
+        )
+        self.val_dataset = Dataset(
+            self.val_dir,
+            self.model_name,
+            self.trainer.global_rank,
+            self.trainer.world_size,
+        )
 
     def prepare_data(self):
         pass
@@ -48,10 +52,3 @@ class DataModule(pl.LightningDataModule):
             persistent_workers=True,
             pin_memory=True,
         )
-
-
-def load_tensors(src):
-    for sample in src:
-        f = BytesIO(sample["pt"])
-        t = torch.load(f)
-        yield t
